@@ -1,49 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
-<search> 
-  
-    
-    <entry>
-      <title>Bk</title>
-      <link href="/2018/06/29/Bk/"/>
-      <url>/2018/06/29/Bk/</url>
-      <content type="html"><![CDATA[]]></content>
-      
+<search>
+  <entry>
+    <title><![CDATA[HTML自定义元素]]></title>
+    <url>%2F2018%2F07%2F31%2F1%2F</url>
+    <content type="text"><![CDATA[一．浏览器处理标准的HTML元素：123&lt;p&gt;Hello World&lt;/p&gt; 非标准（浏览器不认识的）：123&lt;greeting&gt;Hello World&lt;/greeting&gt; 自定义的元素：12345greeting&#123; display: block; font-size: 36px; color: red;&#125; 浏览器提供了一个HTMLUnknoweElement对象，所有自定义元素都是该对象的实例。 自定义tabs元素，同时继承HTMLUnknownElement和HTMLElement接口：123Var tabs=document.createElement(‘tabs’)Tabs instanceof HTMLUnknownElement//trueTabs instanceof HTMLElement//true 二．HTML import1234567&lt;share-buttons&gt; &lt;social-button type=”weibo”&gt; &lt;a href==”…”&gt;微博&lt;/a&gt; &lt;social-button type=”weixin”&gt; &lt;a href+”…”&gt;微信&lt;/a&gt; &lt;/social-button&gt;&lt;/share-buttons&gt; 将share-buttons自定义元素和脚本，封装在HTML文件share-buttons.html之中，元素使用的时候，先引进12 share-buttons.html.&lt;link rel=”import” href=”share-buttons.html”&gt; 然后网页中可以使用123456&lt;share-buttons&gt;:&lt;article&gt; &lt;h1&gt;Title&lt;/h1&gt; &lt;&gt;share-buttons/&gt; … …&lt;/article&gt; 三. Custom Elements 标准1．W3C 为自定义制定了单独的Custom Elements 2．它与其他的三个标准放在一起——HTML import, HTML Template, Shadow DOM——统称为Web Components规范。 Custom Elements 标准对自定义元素的名字做了限制：“自定义元素的名字必须包含一个破折号（-）所以,和都是正确的名字，而和&lt;foo_bar&gt;是不正确的。这样的限制使得HTML解析器可以分辨哪些是标准元素，哪些是自定义元素。”]]></content>
       <categories>
-          
-          <category> 心情 </category>
-          
+        <category>星球笔记</category>
       </categories>
-      
-      
-        <tags>
-            
-            <tag> hexo </tag>
-            
-        </tags>
-      
-    </entry>
-    
-    <entry>
-      <title>晴</title>
-      <link href="/2018/06/28/2/"/>
-      <url>/2018/06/28/2/</url>
-      <content type="html"><![CDATA[<h1 id="努力-奋斗"><a href="#努力-奋斗" class="headerlink" title="努力+奋斗"></a>努力+奋斗</h1>]]></content>
-      
+      <tags>
+        <tag>HTML</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[Bk]]></title>
+    <url>%2F2018%2F06%2F29%2FBk%2F</url>
+    <content type="text"></content>
       <categories>
-          
-          <category> 心情 </category>
-          
+        <category>心情</category>
       </categories>
-      
-      
-        <tags>
-            
-            <tag> hexo </tag>
-            
-        </tags>
-      
-    </entry>
-    
-  
-  
+      <tags>
+        <tag>hexo</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[晴]]></title>
+    <url>%2F2018%2F06%2F28%2F2%2F</url>
+    <content type="text"><![CDATA[努力+奋斗]]></content>
+      <categories>
+        <category>心情</category>
+      </categories>
+      <tags>
+        <tag>hexo</tag>
+      </tags>
+  </entry>
 </search>
