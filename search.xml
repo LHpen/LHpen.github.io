@@ -1,9 +1,45 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title><![CDATA[被动信息收集之搜索引擎]]></title>
+    <url>%2F2018%2F07%2F31%2F7%2F</url>
+    <content type="text"><![CDATA[搜索引擎功能： 1.收集要渗透的公司的新闻动态2.重要的雇员信息，比如这个雇员是哪个大佬，他的职务，所掌握的信息3.机密文档/网络拓扑：有些公司的机密文档是放在公网上的，但是隐藏了，但是会被强大的搜索引擎扫出来4.用户名和密码：有些用户名密码是默认的，这就可以通过搜索引擎查找，比如某个品牌的摄像头设置了默认密码，就可以通过搜索引擎查看这个品牌的默认密码，也有一些密码可能被别人脱裤了，放到了网上，我们也可以查到，然后利用撞库尝试密码5.目标系统的技术架构：搜集要渗透的公司技术架构，用的是什么软硬件，什么版本，有什么已经公开的漏洞 Shodan工具：Shadan是一款功能强大的搜索引擎，但是它不爬取网页信息，只爬取各种网路设备，例如http,ftp,ssh,telent等工具地址：https://www.shodan.io/ 常见的filiter(过滤器,搜索框可以填写的)： net:192.168.1.1country:CN,US,JP（将搜索结果限定在某个国家）city:Beijingport:80os:windows/linuxhostbane:kaliserver:apache 使用教程：http://www.freebuf.com/sectool/121339.html hacking Goole： 基本使用：①+支付 -充值（要支付，不要充值）支付 充值（支付&amp;&amp;充值）“支付 充值“（只含”支付 充值“这个字段）intile:电子商务intext(正文)site：搜索的站点inurl：contact（网站中含有电话的）filetype：pdf（搜索pdf） 使用教程：https://www.exploit-db.com/google-hacking-database/]]></content>
+      <categories>
+        <category>星球笔记</category>
+      </categories>
+      <tags>
+        <tag>渗透测试</tag>
+        <tag>信息收集</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[被动信息收集之dns区域传输与爆破]]></title>
+    <url>%2F2018%2F07%2F31%2F6%2F</url>
+    <content type="text"><![CDATA[Dns：采用递归查询递归是什么: 指在函数的定义中使用函数自身的方法。归查询是最常见的查询方式，域名服务器将代替提出请求的客户机进行域名查询，若域名服务器不能直接回答，则域名服务器会在域各树中的各分支的上下进行递归查询，最终将返回查询结果给客户机，在域名服务器查询期间，客户机完全处于等待状态。 递归八部过程： 首先，客户端提出域名解析请求，并将该请求发或转发给本地的dns服务器。接着，本地dns服务器收到请求后就去查询自己的缓存，如果有该条记录，则会将查询返回给客户端。（“非权威性”的应答） 如何dns服务器本地没有搜索到相应的记录，则会把请求转发到根DNS(13台根DNS服务器的IP信息默认均存在dns服务器中，当需要时就会去有选择性的连接)。然后，根DNS服务器收到请求后会判断这个域名是谁来授权管理，并会返回一个负责该域名子域名的DNS服务器地址。比如，查询abc.com的IP，根DNS服务器就会在负责.com顶级域名的DNS服务器中选择一个（并非随机，而是根据空间，地址，管辖区域等条件进行筛选），返回给本地DNS服务器。可以说根域对顶级域名有绝对管理权，自然也知道他们的全部信息，因为DNS系统中，上一级对下一级有管理权限，毫无疑问，根DNS是最高一级了。 本地DNS服务器收到这个地址后，就开始联系对方并将此请求发给他。负责.com域名的某台服务器收到此请求后，如果自己无法解析，就会返回一个管理.com的下一级DNS服务器地址给本地DNS服务器，也就是负责管理abc.com的DNS。 当本地DNS服务器收到这个地址后，就会重复上面的动作，继续往下联系。 不断重复这样的轮回过程，直到有一台DNS服务器可以顺利解析出这个地址为止。在这个过程中，客户端一直处理等待状态，他不需要做任何事，也做不了上面。 直到本地DNS服务器获得IP时，才会把这个IP返回给客户端，到此在本地的DNS服务器取得IP地址后，递归查询就算完成了。本地DNS服务器同时会将这条记录写入自己的缓存，以备后用。到此，整个解析过程完成。 客户端拿到整个地址后，就可以顺利往下进行了。但假设客户端请求的域名根本不存在，解析自然不成功，DNS服务器会返回此域名不可达，值啊客户端的提现就是网页无法浏览或者网络程序无法连接等待。 从DNS服务器本地没有搜索到相应的记录，到在本地的DNS服务器取得IP地址这个过程就叫做DNS递归查询。 dig查询工具：dig命令：1dig www.sina.com any(查找所有记录) @8.8.8.8（指定dns服务器） 基本参数：+noall：不显示任何结果，一般其他参数使用。+answer：只显示结果。-x：反向解析 dig -x 192.168.1.1(反向查询：ptr记录)配合使用：dig+noall+answer……(除了结果什么都不显示)** 利用dig查询并进行抓包：1dig sina.com +trace 1.进行域名追踪并通过wireshark进行抓包，可以了解到dns递归查询是怎样查询的，并且通过抓包，可以发现是否有人对dns服务器进行劫持，把域名解析道恶意网站。2.dig不能查询一个域名下的所有记录3.利用dig查询bind版本（dns的bing版本）查看存在的漏洞，对dns服务器进行攻击，进而取得所有的记录。 基本命令：1dig +noall +answer txt chaos（类） VERSION.BING @ns3.dnsv4.com 命令的意思：查询txt记录，它是chaos类，一般查的ns,cname,a记录都是inter类，可以通过抓包查看记录是什么类，后面接的是bind版本，@后接要查的dns服务器。 dns区域传输：（配合抓包） 利用dns之间的同步机制（一台dns服务器上的变更可以同步到其他的服务器，一般区域传输至存在本地dns服务器上，如果管理员配置错误，就有可能让人访问到所有的记录），首先利用nslookup或者dig查询域名下的dns服务器，配合抓包。常见命令：12dig @ns1.example.com example.com axfr（区域传输的方法：差异化传输）#一般不会成功，除非配置错误host -T(使用TCP) -l(采用axfr传输) sina.com ns3.sina.com Dns字典爆破：向dns服务器发送查询，如果有这个记录，就会返回结果，反之不反回，利用这个原理进行暴力破解。（一般区域传输都不会成功，特别是大型网站，） 命令： fierce -dnsserver 192.168.1.1 -dns sina.com.cn -wordlist a.txtdnsdict6 -d4 -t 16(使用线程数) -x sina.com（推荐）dnsenum -f dnsbig.txt -dnsserver 8.8.8.8 sina.com -o sina.txtdnsmap sina.com -w dns.txtdnsrecon -d sina.com –lifetime 10 -t brt -D dnsbig.txtdnsrecon -t std -d sina.com]]></content>
+      <categories>
+        <category>星球笔记</category>
+      </categories>
+      <tags>
+        <tag>渗透测试</tag>
+        <tag>信息收集</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[面向基础篇之信息搜集]]></title>
+    <url>%2F2018%2F07%2F31%2F3%2F</url>
+    <content type="text"><![CDATA[概要：渗透测试的第一步为信息收集。信息收集分为两个方面，主动信息收集和被动信息收集。被动信息收集注意事项： 信息是公开渠道可获得的信息，例如网络上的信息，街边的小广告 收集信息时不与系统产生直接交互（例如不对主机进行大量探测，不进行端口扫描） 尽量避免留下一切痕迹 可收集的信息内容：ip地址段域名信息邮件地址文档图片公司地址公司组织架构联系电话人员姓名/职务目标系统的技术框架公开的商业信息 用途： 信息描述目标社会工程学等 ip域名查询工具： nslookup域名记录： A（Adress）用来指定主机名（或域名）的对应的ip地址记录。C name：通常称别名指向，可以将注册的不同域名统统转到一个主域名上，CNAME别名记录与A记录不同的是可以是一个域名的描述而不一定是ip地址。NS：（Name Server）是域名服务器记录，用来指定域名应该由哪个DNS服务器来进行解析。MX：邮件交换记录，他指向一个邮件服务器，用于电子邮件系统发邮件时根据收信人的地址后缀来定位邮件服务器。Ptr(ip地址反向解析)：邮件交换记录TXT记录：一般为某个主机名或域名设置的说明Url：地址转发FQND：完全限定域名，与域名不同（eg：www.sina.com 就是一个完全限定域名，只是域名的其中一种） Dns查询方式：递归查询（域名服务器将代替提出请求的客户机（下级DNS服务器）进行域名查询，若域名服务器不能直接回答，则域名服务器会在域各树中的各分支的上下进行递归查询，最终将返回查询结果给客户机，在域名服务器查询期间，客户机将完全处于等待状态。） nslookup使用方法： 直接输入nslookup进行命令提示符操作通过server+ip地址（中间一定要有个空格）选择要查询的dns服务器通过 set type=a/ns/ptr/any(代表所有记录)可以将第一种方法上的所有参数用一条命令写出来：1nslookup -type=a baidu.com 114.114.114.114(指定想用的本地dns服务器) 一个域名可以解析多个主机记录和多个cname，对应多个ip地址，对一个ip地址进行ptr查询的时候不一定返回一个相同的域名。使用不同的服务器解析相同的了域名会有不同的ip地址，因为智能dns服务器会尽量将流量限定在本地网络，当进行域名查询的时候会返回最近的域名服务器的地址。]]></content>
+      <categories>
+        <category>星球笔记</category>
+      </categories>
+      <tags>
+        <tag>渗透测试</tag>
+        <tag>信息收集</tag>
+      </tags>
+  </entry>
+  <entry>
     <title><![CDATA[HTML自定义元素]]></title>
     <url>%2F2018%2F07%2F31%2F1%2F</url>
-    <content type="text"><![CDATA[一．浏览器处理标准的HTML元素：123&lt;p&gt;Hello World&lt;/p&gt; 非标准（浏览器不认识的）：123&lt;greeting&gt;Hello World&lt;/greeting&gt; 自定义的元素：12345greeting&#123; display: block; font-size: 36px; color: red;&#125; 浏览器提供了一个HTMLUnknoweElement对象，所有自定义元素都是该对象的实例。 自定义tabs元素，同时继承HTMLUnknownElement和HTMLElement接口：123Var tabs=document.createElement(‘tabs’)Tabs instanceof HTMLUnknownElement//trueTabs instanceof HTMLElement//true 二．HTML import1234567&lt;share-buttons&gt; &lt;social-button type=”weibo”&gt; &lt;a href==”…”&gt;微博&lt;/a&gt; &lt;social-button type=”weixin”&gt; &lt;a href+”…”&gt;微信&lt;/a&gt; &lt;/social-button&gt;&lt;/share-buttons&gt; 将share-buttons自定义元素和脚本，封装在HTML文件share-buttons.html之中，元素使用的时候，先引进12 share-buttons.html.&lt;link rel=”import” href=”share-buttons.html”&gt; 然后网页中可以使用123456&lt;share-buttons&gt;:&lt;article&gt; &lt;h1&gt;Title&lt;/h1&gt; &lt;&gt;share-buttons/&gt; … …&lt;/article&gt; 三. Custom Elements 标准1．W3C 为自定义制定了单独的Custom Elements 2．它与其他的三个标准放在一起——HTML import, HTML Template, Shadow DOM——统称为Web Components规范。 Custom Elements 标准对自定义元素的名字做了限制：“自定义元素的名字必须包含一个破折号（-）所以,和都是正确的名字，而和&lt;foo_bar&gt;是不正确的。这样的限制使得HTML解析器可以分辨哪些是标准元素，哪些是自定义元素。”]]></content>
+    <content type="text"><![CDATA[一．浏览器处理标准的HTML元素：123&lt;p&gt;Hello World&lt;/p&gt; 非标准（浏览器不认识的）：123&lt;greeting&gt;Hello World&lt;/greeting&gt; 自定义的元素：12345greeting&#123; display: block; font-size: 36px; color: red;&#125; 浏览器提供了一个HTMLUnknoweElement对象，所有自定义元素都是该对象的实例。自定义tabs元素，同时继承HTMLUnknownElement和HTMLElement接口：123Var tabs=document.createElement(‘tabs’)Tabs instanceof HTMLUnknownElement//trueTabs instanceof HTMLElement//true 二．HTML import1234567&lt;share-buttons&gt; &lt;social-button type=”weibo”&gt; &lt;a href==”…”&gt;微博&lt;/a&gt; &lt;social-button type=”weixin”&gt; &lt;a href+”…”&gt;微信&lt;/a&gt; &lt;/social-button&gt;&lt;/share-buttons&gt; 将share-buttons自定义元素和脚本，封装在HTML文件share-buttons.html之中，元素使用的时候，先引进12 share-buttons.html.&lt;link rel=”import” href=”share-buttons.html”&gt; 然后网页中可以使用123456&lt;share-buttons&gt;:&lt;article&gt; &lt;h1&gt;Title&lt;/h1&gt; &lt;&gt;share-buttons/&gt; … …&lt;/article&gt; 三. Custom Elements 标准1．W3C 为自定义制定了单独的Custom Elements 2．它与其他的三个标准放在一起——HTML import, HTML Template, Shadow DOM——统称为Web Components规范。 Custom Elements 标准对自定义元素的名字做了限制：“自定义元素的名字必须包含一个破折号（-）所以,和都是正确的名字，而和&lt;foo_bar&gt;是不正确的。这样的限制使得HTML解析器可以分辨哪些是标准元素，哪些是自定义元素。”]]></content>
       <categories>
         <category>星球笔记</category>
       </categories>
