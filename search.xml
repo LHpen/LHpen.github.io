@@ -1,6 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
+    <title><![CDATA[一个人，一座城]]></title>
+    <url>%2F2018%2F08%2F03%2F9%2F</url>
+    <content type="text"><![CDATA[“过往不恋,未来不迎,当下不负。”晚安。]]></content>
+      <categories>
+        <category>心情</category>
+      </categories>
+      <tags>
+        <tag>心情</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[Python爬虫之猫眼TOP100]]></title>
+    <url>%2F2018%2F08%2F02%2F8%2F</url>
+    <content type="text"><![CDATA[感谢遇到的每个BUG!!!基于Requests基础库的爬虫demo 1234567891011121314151617181920212223242526272829303132333435363738394041424344454647484950515253import requests #导入请求模块import json#json格式from requests.exceptions import RequestException#捕捉错误模块import re#正则模块import time#时间模块def get_one_page(url): try:#检测 headers = &#123; &apos;User-Agent&apos;: &apos;Mozilla/5.0(Windows NT 10.0;Win64;x64;rv:59.0)Gecko/20100101 Firefox/59.0&apos;, &#125; response = requests.get(url, headers=headers)#请求 if response.status_code == 200: return response.text print(&apos;请求不成功&apos;) except RequestException: print(&apos;程序错误&apos;)def parse_one_page(html):#利用正则筛选需要的数据 pattern = re.compile(&apos;&lt;dd&gt;.*?board-index.*?&gt;(\d+)&lt;/i&gt;.*?data-src=&quot;(.*?)&quot;.*?name&quot;&gt;&lt;a&apos; + &apos;.*?&gt;(.*?)&lt;/a&gt;.*?star&quot;&gt;(.*?)&lt;/p&gt;.*?releasetime&quot;&gt;(.*?)&lt;/p&gt;&apos; + &apos;.*?integer&quot;&gt;(.*?)&lt;/i&gt;.*?fraction&quot;&gt;(.*?)&lt;/i&gt;.*?&lt;/dd&gt;&apos;, re.S)#正则表达式实例化 items=re.findall(pattern, html)#findall(正则表达式，参数对象)搜索整个字符串 for item in items: yield &#123; #迭代生成器 &apos;排名&apos;: item[0], &apos;图片&apos;: item[1], &apos;电影名&apos;: item[2], &apos;主演人员&apos;: item[3].strip()[3:],#strip() 方法用于移除字符串头尾指定的字符（默认为空格或换行符）或字符序列 &apos;上映时间&apos;: item[4].strip()[5:], &apos;评分&apos;: item[5]+ item[6] &#125;def write_to_file(content):#写入文件 with open(&apos;猫眼TOP100.txt&apos;, &apos;a&apos;, encoding=&apos;utf-8&apos;) as f: f.write(json.dumps(content, ensure_ascii=False) + &apos;\n&apos;)#json.dumps()将 Python 对象编码成 JSON 字符串def main(offset):#提供参数实行遍历 url = &apos;http://maoyan.com/board/4?offset=&apos; + str(offset)#提供url html = get_one_page(url)#把requests实例化 for item in parse_one_page(html): print(item)#打印已经筛选好的数据 write_to_file(item)#传入数据写入文件if __name__ == &apos;__main__&apos;:#这个表示执行的是此代码所在的文件。 如果这个文件是作为模块被其他文件调用，不会执行这里面的代码。 只有执行这个文件时， if 里面的语句才会被执行。 这个功能经常可以用于进行测试。 for i in range(10):#range() 从 0 开始到 10；[0, 1, 2, 3, 4, 5, 6, 7, 8, 9] main(offset=i * 10)#分页爬取 time.sleep(1)# 推迟执行的秒数。]]></content>
+      <categories>
+        <category>Python爬虫</category>
+      </categories>
+      <tags>
+        <tag>Python</tag>
+        <tag>爬虫</tag>
+      </tags>
+  </entry>
+  <entry>
     <title><![CDATA[被动信息收集之搜索引擎]]></title>
     <url>%2F2018%2F07%2F31%2F7%2F</url>
     <content type="text"><![CDATA[搜索引擎功能： 1.收集要渗透的公司的新闻动态2.重要的雇员信息，比如这个雇员是哪个大佬，他的职务，所掌握的信息3.机密文档/网络拓扑：有些公司的机密文档是放在公网上的，但是隐藏了，但是会被强大的搜索引擎扫出来4.用户名和密码：有些用户名密码是默认的，这就可以通过搜索引擎查找，比如某个品牌的摄像头设置了默认密码，就可以通过搜索引擎查看这个品牌的默认密码，也有一些密码可能被别人脱裤了，放到了网上，我们也可以查到，然后利用撞库尝试密码5.目标系统的技术架构：搜集要渗透的公司技术架构，用的是什么软硬件，什么版本，有什么已经公开的漏洞 Shodan工具：Shadan是一款功能强大的搜索引擎，但是它不爬取网页信息，只爬取各种网路设备，例如http,ftp,ssh,telent等工具地址：https://www.shodan.io/ 常见的filiter(过滤器,搜索框可以填写的)： net:192.168.1.1country:CN,US,JP（将搜索结果限定在某个国家）city:Beijingport:80os:windows/linuxhostbane:kaliserver:apache 使用教程：http://www.freebuf.com/sectool/121339.html hacking Goole： 基本使用：①+支付 -充值（要支付，不要充值）支付 充值（支付&amp;&amp;充值）“支付 充值“（只含”支付 充值“这个字段）intile:电子商务intext(正文)site：搜索的站点inurl：contact（网站中含有电话的）filetype：pdf（搜索pdf） 使用教程：https://www.exploit-db.com/google-hacking-database/]]></content>
