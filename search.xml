@@ -1,206 +1,118 @@
 <?xml version="1.0" encoding="utf-8"?>
-<search> 
-  
-    
-    <entry>
-      <title>Python爬虫之淘宝爬取</title>
-      <link href="/2018/08/21/11/"/>
-      <url>/2018/08/21/11/</url>
-      <content type="html"><![CDATA[<center><strong><em>好久没更新博客，学习爬虫路漫漫。</em></strong></center><center><strong>基于《pthon3网络爬虫开发实战》的学习笔记</strong></center><blockquote><p><strong>采用方法：Selenium</strong><br><strong>数据处理：Pyquery</strong><br><strong>模拟浏览器：Chrome</strong><br><strong>为什么使用Selenium：淘宝页面数据是基于Ajax处理的，接口数等比较复杂，难以构造Ajax参数来实现抓取，使用Selenium库模仿浏览器来实行操作，所有数据将直接显示出来，然后进行提取即可。</strong></p></blockquote><blockquote><p><strong>思路分析：<br>1.确认请求页面，配置浏览器对象<br>2.模拟浏览器操作，分析并提取相应节点<br>3.判断节点是否加载成功<br>4.抓取商品数据<br>5.提取数据并进行存储<br>6.代码完成</strong></p></blockquote><p><strong><center></center></strong><br><a id="more"></a></p><h1 id="创建一个py文件用来存储MongoDB数据库的配置"><a href="#创建一个py文件用来存储MongoDB数据库的配置" class="headerlink" title="创建一个py文件用来存储MongoDB数据库的配置"></a>创建一个py文件用来存储MongoDB数据库的配置</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">MONGO_URL = &apos;localhost&apos;</span><br><span class="line">#连接数据库</span><br><span class="line"></span><br><span class="line">MONGO_DB = &apos;taobao&apos;</span><br><span class="line">#数据库名字</span><br><span class="line"></span><br><span class="line">MONGO_COLLECTION = &apos;products&apos;</span><br><span class="line">#集合名字</span><br><span class="line"></span><br><span class="line">KEYWORD = &apos;ipad&apos;</span><br><span class="line">#抓取的目标</span><br><span class="line"></span><br><span class="line">MAX_PAGE = 100</span><br><span class="line">#页码</span><br><span class="line"></span><br><span class="line">SERVICE_ARGS = [&apos;--load-images=false&apos;, &apos;--disk-cache=true&apos;]</span><br></pre></td></tr></table></figure><h1 id="模拟浏览器的配置"><a href="#模拟浏览器的配置" class="headerlink" title="模拟浏览器的配置"></a>模拟浏览器的配置</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line">import pymongo</span><br><span class="line">#导入MongoDB包</span><br><span class="line">from selenium import webdriver</span><br><span class="line">#导入浏览器包</span><br><span class="line">from selenium.common.exceptions import TimeoutException</span><br><span class="line">#导入时间异常包，为进程或操作分配的时间已过期时引发的异常。</span><br><span class="line">from selenium.webdriver.common.by import By</span><br><span class="line">#导入元素查询</span><br><span class="line">from selenium.webdriver.support import expected_conditions as EC</span><br><span class="line">#导入条件判断</span><br><span class="line">from selenium.webdriver.support.wait import WebDriverWait</span><br><span class="line">#导入浏览器显式等待包</span><br><span class="line">from pyquery import PyQuery as pq</span><br><span class="line">#导入Pyquery解析库</span><br><span class="line">from config import *</span><br><span class="line">#导入自己配置的MongoBD的包</span><br><span class="line">from urllib.parse import quote</span><br><span class="line">#编码转换</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">chrome_options = webdriver.ChromeOptions()</span><br><span class="line">#chromeoptions 是一个方便控制 chrome 启动时属性的类。</span><br><span class="line">chrome_options.add_argument(&apos;--headless&apos;)</span><br><span class="line">#Chrome-headless 模式，Google 自己出的无头浏览器模式。</span><br><span class="line">browser = webdriver.Chrome(chrome_options=chrome_options)</span><br><span class="line">#浏览器初始化</span><br><span class="line"></span><br><span class="line">wait = WebDriverWait(browser, 10)</span><br><span class="line">#设置等待时间</span><br><span class="line">client = pymongo.MongoClient(MONGO_URL)</span><br><span class="line">#连接MongoDB</span><br><span class="line">db = client[MONGO_DB]</span><br><span class="line">#指定数据库名字</span><br></pre></td></tr></table></figure><h1 id="模拟浏览器操作点击"><a href="#模拟浏览器操作点击" class="headerlink" title="模拟浏览器操作点击"></a>模拟浏览器操作点击</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line">def index_page(page):</span><br><span class="line">    &quot;&quot;&quot;</span><br><span class="line">    抓取索引页</span><br><span class="line">    :param page: 页码</span><br><span class="line">    &quot;&quot;&quot;</span><br><span class="line">    print(&apos;正在爬取第&apos;, page, &apos;页&apos;)</span><br><span class="line">    try:</span><br><span class="line">        url = &apos;https://s.taobao.com/search?q=&apos; + quote(KEYWORD)</span><br><span class="line">        #quote()屏蔽特殊的字符、比如如果url里面的空格！</span><br><span class="line">        #url里面是不允许出现空格的。</span><br><span class="line"></span><br><span class="line">        browser.get(url)</span><br><span class="line">        if page &gt; 1:</span><br><span class="line">            input = wait.until(</span><br><span class="line">                EC.presence_of_element_located((By.CSS_SELECTOR, &apos;#mainsrp-pager div.form &gt; input&apos;)))</span><br><span class="line">            #条件判断，css节点10秒内加载出来则继续，否报出异常</span><br><span class="line">            submit = wait.until(</span><br><span class="line">                EC.element_to_be_clickable((By.CSS_SELECTOR, &apos;#mainsrp-pager div.form &gt; span.btn.J_Submit&apos;)))</span><br><span class="line">            #条件判断，css选择器10秒内节点可点击则继续，否报出异常</span><br><span class="line">            input.clear()#清空文字</span><br><span class="line">            input.send_keys(page)#输入page参数</span><br><span class="line">            submit.click()#点击按钮</span><br><span class="line">        wait.until(</span><br><span class="line">            EC.text_to_be_present_in_element(</span><br><span class="line">            (By.CSS_SELECTOR, &apos;#mainsrp-pager li.item.active &gt; span&apos;), str(page)))</span><br><span class="line">        #条件判断，10秒内某个节点是否包含某些文字</span><br><span class="line">        wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, &apos;.m-itemlist .items .item&apos;)))</span><br><span class="line">        #条件判断，10秒内节点是否加载出来</span><br><span class="line">        get_products()#如果加载出来进行提取过程</span><br><span class="line">    except TimeoutException:#异常捕获</span><br><span class="line">        index_page(page)#重新开始运行</span><br></pre></td></tr></table></figure><h1 id="提取所需数据"><a href="#提取所需数据" class="headerlink" title="提取所需数据"></a>提取所需数据</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">def get_products():</span><br><span class="line">    &quot;&quot;&quot;</span><br><span class="line">    提取商品数据</span><br><span class="line">    &quot;&quot;&quot;</span><br><span class="line">    html = browser.page_source#获取网页源码</span><br><span class="line">    doc = pq(html)#pyquery初始化</span><br><span class="line">    items = doc(&apos;#mainsrp-itemlist .items .item&apos;).items()</span><br><span class="line">    #字典化对象</span><br><span class="line">    for item in items:</span><br><span class="line">        product = &#123;</span><br><span class="line">            &apos;图片&apos;: item.find(&apos;.pic .img&apos;).attr(&apos;data-src&apos;),</span><br><span class="line">            #attr() 方法设置或返回被选元素的属性和值。</span><br><span class="line">            &apos;价格&apos;: item.find(&apos;.price&apos;).text(),</span><br><span class="line">            &apos;付款人数&apos;: item.find(&apos;.deal-cnt&apos;).text(),</span><br><span class="line">            &apos;商品名称&apos;: item.find(&apos;.title&apos;).text(),</span><br><span class="line">            &apos;店铺&apos;: item.find(&apos;.shop&apos;).text(),</span><br><span class="line">            &apos;发货地址&apos;: item.find(&apos;.location&apos;).text()</span><br><span class="line">        &#125;</span><br><span class="line">        print(product)#打印</span><br><span class="line">        save_to_mongo(product)#存入数据</span><br></pre></td></tr></table></figure><h1 id="进行数据存储"><a href="#进行数据存储" class="headerlink" title="进行数据存储"></a>进行数据存储</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">def save_to_mongo(result):</span><br><span class="line">    &quot;&quot;&quot;</span><br><span class="line">    保存至MongoDB</span><br><span class="line">    :param result: 结果</span><br><span class="line">    &quot;&quot;&quot;</span><br><span class="line">    try:</span><br><span class="line">        if db[MONGO_COLLECTION].insert(result):</span><br><span class="line">        #写入到集合里面去，集合就是行和列</span><br><span class="line">            print(&apos;存储到MongoDB成功&apos;)</span><br><span class="line">    except Exception:</span><br><span class="line">        print(&apos;存储到MongoDB失败&apos;)</span><br></pre></td></tr></table></figure><h1 id="设置抓取页数"><a href="#设置抓取页数" class="headerlink" title="设置抓取页数"></a>设置抓取页数</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">def main():</span><br><span class="line">    &quot;&quot;&quot;</span><br><span class="line">    遍历每一页</span><br><span class="line">    &quot;&quot;&quot;</span><br><span class="line">    for i in range(1, MAX_PAGE + 1):#遍历1到100页码</span><br><span class="line">        index_page(i)#写入参数</span><br><span class="line">    browser.close()#关闭浏览器</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">if __name__ == &apos;__main__&apos;:</span><br><span class="line">    main()</span><br></pre></td></tr></table></figure>]]></content>
-      
+<search>
+  <entry>
+    <title><![CDATA[Git学习笔记图]]></title>
+    <url>%2F2019%2F04%2F25%2F12%2F</url>
+    <content type="text"><![CDATA[简单明了的常用命令]]></content>
       <categories>
-          
-          <category> Python爬虫 </category>
-          
+        <category>工具笔记</category>
       </categories>
-      
-      
-        <tags>
-            
-            <tag> Python </tag>
-            
-            <tag> 爬虫 </tag>
-            
-        </tags>
-      
-    </entry>
-    
-    <entry>
-      <title>一个人，一座城</title>
-      <link href="/2018/08/03/9/"/>
-      <url>/2018/08/03/9/</url>
-      <content type="html"><![CDATA[<h1 id="“过往不恋-未来不迎-当下不负。”"><a href="#“过往不恋-未来不迎-当下不负。”" class="headerlink" title="“过往不恋,未来不迎,当下不负。”"></a><center>“过往不恋,未来不迎,当下不负。”</center></h1><h1 id="晚安。"><a href="#晚安。" class="headerlink" title="晚安。"></a><center>晚安。</center></h1>]]></content>
-      
+      <tags>
+        <tag>Git</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[Python爬虫之淘宝爬取]]></title>
+    <url>%2F2018%2F08%2F21%2F11%2F</url>
+    <content type="text"><![CDATA[好久没更新博客，学习爬虫路漫漫。 基于《pthon3网络爬虫开发实战》的学习笔记 采用方法：Selenium数据处理：Pyquery模拟浏览器：Chrome为什么使用Selenium：淘宝页面数据是基于Ajax处理的，接口数等比较复杂，难以构造Ajax参数来实现抓取，使用Selenium库模仿浏览器来实行操作，所有数据将直接显示出来，然后进行提取即可。 思路分析：1.确认请求页面，配置浏览器对象2.模拟浏览器操作，分析并提取相应节点3.判断节点是否加载成功4.抓取商品数据5.提取数据并进行存储6.代码完成 创建一个py文件用来存储MongoDB数据库的配置12345678910111213141516MONGO_URL = &apos;localhost&apos;#连接数据库MONGO_DB = &apos;taobao&apos;#数据库名字MONGO_COLLECTION = &apos;products&apos;#集合名字KEYWORD = &apos;ipad&apos;#抓取的目标MAX_PAGE = 100#页码SERVICE_ARGS = [&apos;--load-images=false&apos;, &apos;--disk-cache=true&apos;] 模拟浏览器的配置123456789101112131415161718192021222324252627282930313233import pymongo#导入MongoDB包from selenium import webdriver#导入浏览器包from selenium.common.exceptions import TimeoutException#导入时间异常包，为进程或操作分配的时间已过期时引发的异常。from selenium.webdriver.common.by import By#导入元素查询from selenium.webdriver.support import expected_conditions as EC#导入条件判断from selenium.webdriver.support.wait import WebDriverWait#导入浏览器显式等待包from pyquery import PyQuery as pq#导入Pyquery解析库from config import *#导入自己配置的MongoBD的包from urllib.parse import quote#编码转换chrome_options = webdriver.ChromeOptions()#chromeoptions 是一个方便控制 chrome 启动时属性的类。chrome_options.add_argument(&apos;--headless&apos;)#Chrome-headless 模式，Google 自己出的无头浏览器模式。browser = webdriver.Chrome(chrome_options=chrome_options)#浏览器初始化wait = WebDriverWait(browser, 10)#设置等待时间client = pymongo.MongoClient(MONGO_URL)#连接MongoDBdb = client[MONGO_DB]#指定数据库名字 模拟浏览器操作点击12345678910111213141516171819202122232425262728293031def index_page(page): &quot;&quot;&quot; 抓取索引页 :param page: 页码 &quot;&quot;&quot; print(&apos;正在爬取第&apos;, page, &apos;页&apos;) try: url = &apos;https://s.taobao.com/search?q=&apos; + quote(KEYWORD) #quote()屏蔽特殊的字符、比如如果url里面的空格！ #url里面是不允许出现空格的。 browser.get(url) if page &gt; 1: input = wait.until( EC.presence_of_element_located((By.CSS_SELECTOR, &apos;#mainsrp-pager div.form &gt; input&apos;))) #条件判断，css节点10秒内加载出来则继续，否报出异常 submit = wait.until( EC.element_to_be_clickable((By.CSS_SELECTOR, &apos;#mainsrp-pager div.form &gt; span.btn.J_Submit&apos;))) #条件判断，css选择器10秒内节点可点击则继续，否报出异常 input.clear()#清空文字 input.send_keys(page)#输入page参数 submit.click()#点击按钮 wait.until( EC.text_to_be_present_in_element( (By.CSS_SELECTOR, &apos;#mainsrp-pager li.item.active &gt; span&apos;), str(page))) #条件判断，10秒内某个节点是否包含某些文字 wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, &apos;.m-itemlist .items .item&apos;))) #条件判断，10秒内节点是否加载出来 get_products()#如果加载出来进行提取过程 except TimeoutException:#异常捕获 index_page(page)#重新开始运行 提取所需数据1234567891011121314151617181920def get_products(): &quot;&quot;&quot; 提取商品数据 &quot;&quot;&quot; html = browser.page_source#获取网页源码 doc = pq(html)#pyquery初始化 items = doc(&apos;#mainsrp-itemlist .items .item&apos;).items() #字典化对象 for item in items: product = &#123; &apos;图片&apos;: item.find(&apos;.pic .img&apos;).attr(&apos;data-src&apos;), #attr() 方法设置或返回被选元素的属性和值。 &apos;价格&apos;: item.find(&apos;.price&apos;).text(), &apos;付款人数&apos;: item.find(&apos;.deal-cnt&apos;).text(), &apos;商品名称&apos;: item.find(&apos;.title&apos;).text(), &apos;店铺&apos;: item.find(&apos;.shop&apos;).text(), &apos;发货地址&apos;: item.find(&apos;.location&apos;).text() &#125; print(product)#打印 save_to_mongo(product)#存入数据 进行数据存储1234567891011def save_to_mongo(result): &quot;&quot;&quot; 保存至MongoDB :param result: 结果 &quot;&quot;&quot; try: if db[MONGO_COLLECTION].insert(result): #写入到集合里面去，集合就是行和列 print(&apos;存储到MongoDB成功&apos;) except Exception: print(&apos;存储到MongoDB失败&apos;) 设置抓取页数1234567891011def main(): &quot;&quot;&quot; 遍历每一页 &quot;&quot;&quot; for i in range(1, MAX_PAGE + 1):#遍历1到100页码 index_page(i)#写入参数 browser.close()#关闭浏览器if __name__ == &apos;__main__&apos;: main()]]></content>
       <categories>
-          
-          <category> 心情 </category>
-          
+        <category>Python爬虫</category>
       </categories>
-      
-      
-        <tags>
-            
-            <tag> 心情 </tag>
-            
-        </tags>
-      
-    </entry>
-    
-    <entry>
-      <title>Python爬虫之猫眼TOP100</title>
-      <link href="/2018/08/02/8/"/>
-      <url>/2018/08/02/8/</url>
-      <content type="html"><![CDATA[<h1 id="感谢遇到的每个BUG"><a href="#感谢遇到的每个BUG" class="headerlink" title="感谢遇到的每个BUG!!!"></a><center>感谢遇到的每个BUG!!!</center></h1><h1 id="基于Requests基础库的爬虫demo"><a href="#基于Requests基础库的爬虫demo" class="headerlink" title="基于Requests基础库的爬虫demo"></a><center><strong>基于Requests基础库的爬虫demo</strong></center></h1><p><img src="http://pb2ryxkgu.bkt.clouddn.com/18-8-3/50980792.jpg"></p><a id="more"></a><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br></pre></td><td class="code"><pre><span class="line">import requests #导入请求模块</span><br><span class="line">import json#json格式</span><br><span class="line">from requests.exceptions import RequestException#捕捉错误模块</span><br><span class="line">import re#正则模块</span><br><span class="line">import time#时间模块</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">def get_one_page(url):</span><br><span class="line">    try:#检测</span><br><span class="line">        headers = &#123;</span><br><span class="line">            &apos;User-Agent&apos;: &apos;Mozilla/5.0(Windows NT 10.0;Win64;x64;rv:59.0)Gecko/20100101 Firefox/59.0&apos;,</span><br><span class="line">        &#125;</span><br><span class="line">        response = requests.get(url, headers=headers)#请求</span><br><span class="line">        if response.status_code == 200:</span><br><span class="line">            return response.text</span><br><span class="line">        print(&apos;请求不成功&apos;)</span><br><span class="line">    except RequestException:</span><br><span class="line">        print(&apos;程序错误&apos;)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">def parse_one_page(html):#利用正则筛选需要的数据</span><br><span class="line">    pattern = re.compile(&apos;&lt;dd&gt;.*?board-index.*?&gt;(\d+)&lt;/i&gt;.*?data-src=&quot;(.*?)&quot;.*?name&quot;&gt;&lt;a&apos;</span><br><span class="line">                         + &apos;.*?&gt;(.*?)&lt;/a&gt;.*?star&quot;&gt;(.*?)&lt;/p&gt;.*?releasetime&quot;&gt;(.*?)&lt;/p&gt;&apos;</span><br><span class="line">                         + &apos;.*?integer&quot;&gt;(.*?)&lt;/i&gt;.*?fraction&quot;&gt;(.*?)&lt;/i&gt;.*?&lt;/dd&gt;&apos;, re.S)#正则表达式实例化</span><br><span class="line">    items=re.findall(pattern, html)#findall(正则表达式，参数对象)搜索整个字符串</span><br><span class="line">    for item in items:</span><br><span class="line">        yield &#123; #迭代生成器</span><br><span class="line">            &apos;排名&apos;: item[0],</span><br><span class="line">            &apos;图片&apos;: item[1],</span><br><span class="line">            &apos;电影名&apos;: item[2],</span><br><span class="line">            &apos;主演人员&apos;: item[3].strip()[3:],#strip() 方法用于移除字符串头尾指定的字符（默认为空格或换行符）或字符序列</span><br><span class="line">            &apos;上映时间&apos;: item[4].strip()[5:],</span><br><span class="line">            &apos;评分&apos;: item[5]+ item[6]</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">def write_to_file(content):#写入文件</span><br><span class="line">    with open(&apos;猫眼TOP100.txt&apos;, &apos;a&apos;, encoding=&apos;utf-8&apos;) as f:</span><br><span class="line">        f.write(json.dumps(content, ensure_ascii=False) + &apos;\n&apos;)#json.dumps()将 Python 对象编码成 JSON 字符串</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">def main(offset):#提供参数实行遍历</span><br><span class="line">    url = &apos;http://maoyan.com/board/4?offset=&apos; + str(offset)#提供url</span><br><span class="line">    html = get_one_page(url)#把requests实例化</span><br><span class="line">    for item in parse_one_page(html):</span><br><span class="line">        print(item)#打印已经筛选好的数据</span><br><span class="line">        write_to_file(item)#传入数据写入文件</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">if __name__ == &apos;__main__&apos;:#这个表示执行的是此代码所在的文件。 如果这个文件是作为模块被其他文件调用，不会执行这里面的代码。 只有执行这个文件时， if 里面的语句才会被执行。 这个功能经常可以用于进行测试。</span><br><span class="line">    for i in range(10):#range() 从 0 开始到 10；[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]</span><br><span class="line">        main(offset=i * 10)#分页爬取</span><br><span class="line">        time.sleep(1)# 推迟执行的秒数。</span><br></pre></td></tr></table></figure>]]></content>
-      
+      <tags>
+        <tag>Python</tag>
+        <tag>爬虫</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[一个人，一座城]]></title>
+    <url>%2F2018%2F08%2F03%2F9%2F</url>
+    <content type="text"><![CDATA[“过往不恋,未来不迎,当下不负。”晚安。]]></content>
       <categories>
-          
-          <category> Python爬虫 </category>
-          
+        <category>心情</category>
       </categories>
-      
-      
-        <tags>
-            
-            <tag> Python </tag>
-            
-            <tag> 爬虫 </tag>
-            
-        </tags>
-      
-    </entry>
-    
-    <entry>
-      <title>被动信息收集之搜索引擎</title>
-      <link href="/2018/07/31/7/"/>
-      <url>/2018/07/31/7/</url>
-      <content type="html"><![CDATA[<h1 id="搜索引擎功能："><a href="#搜索引擎功能：" class="headerlink" title="搜索引擎功能："></a>搜索引擎功能：</h1><blockquote><h2 id="1-收集要渗透的公司的新闻动态"><a href="#1-收集要渗透的公司的新闻动态" class="headerlink" title="1.收集要渗透的公司的新闻动态"></a>1.收集要渗透的公司的新闻动态</h2><h2 id="2-重要的雇员信息，比如这个雇员是哪个大佬，他的职务，所掌握的信息"><a href="#2-重要的雇员信息，比如这个雇员是哪个大佬，他的职务，所掌握的信息" class="headerlink" title="2.重要的雇员信息，比如这个雇员是哪个大佬，他的职务，所掌握的信息"></a>2.重要的雇员信息，比如这个雇员是哪个大佬，他的职务，所掌握的信息</h2><h2 id="3-机密文档-网络拓扑：有些公司的机密文档是放在公网上的，但是隐藏了，但是会被强大的搜索引擎扫出来"><a href="#3-机密文档-网络拓扑：有些公司的机密文档是放在公网上的，但是隐藏了，但是会被强大的搜索引擎扫出来" class="headerlink" title="3.机密文档/网络拓扑：有些公司的机密文档是放在公网上的，但是隐藏了，但是会被强大的搜索引擎扫出来"></a>3.机密文档/网络拓扑：有些公司的机密文档是放在公网上的，但是隐藏了，但是会被强大的搜索引擎扫出来</h2><h2 id="4-用户名和密码：有些用户名密码是默认的，这就可以通过搜索引擎查找，比如某个品牌的摄像头设置了默认密码，就可以通过搜索引擎查看这个品牌的默认密码，也有一些密码可能被别人脱裤了，放到了网上，我们也可以查到，然后利用撞库尝试密码"><a href="#4-用户名和密码：有些用户名密码是默认的，这就可以通过搜索引擎查找，比如某个品牌的摄像头设置了默认密码，就可以通过搜索引擎查看这个品牌的默认密码，也有一些密码可能被别人脱裤了，放到了网上，我们也可以查到，然后利用撞库尝试密码" class="headerlink" title="4.用户名和密码：有些用户名密码是默认的，这就可以通过搜索引擎查找，比如某个品牌的摄像头设置了默认密码，就可以通过搜索引擎查看这个品牌的默认密码，也有一些密码可能被别人脱裤了，放到了网上，我们也可以查到，然后利用撞库尝试密码"></a>4.用户名和密码：有些用户名密码是默认的，这就可以通过搜索引擎查找，比如某个品牌的摄像头设置了默认密码，就可以通过搜索引擎查看这个品牌的默认密码，也有一些密码可能被别人脱裤了，放到了网上，我们也可以查到，然后利用撞库尝试密码</h2><h2 id="5-目标系统的技术架构：搜集要渗透的公司技术架构，用的是什么软硬件，什么版本，有什么已经公开的漏洞"><a href="#5-目标系统的技术架构：搜集要渗透的公司技术架构，用的是什么软硬件，什么版本，有什么已经公开的漏洞" class="headerlink" title="5.目标系统的技术架构：搜集要渗透的公司技术架构，用的是什么软硬件，什么版本，有什么已经公开的漏洞"></a>5.目标系统的技术架构：搜集要渗透的公司技术架构，用的是什么软硬件，什么版本，有什么已经公开的漏洞</h2></blockquote><a id="more"></a><h1 id="Shodan工具："><a href="#Shodan工具：" class="headerlink" title="Shodan工具："></a>Shodan工具：</h1><p><strong>Shadan是一款功能强大的搜索引擎，但是它不爬取网页信息，只爬取各种网路设备，例如http,ftp,ssh,telent等</strong><br>工具地址：<a href="https://www.shodan.io/" target="_blank" rel="noopener">https://www.shodan.io/</a></p><h2 id="常见的filiter-过滤器-搜索框可以填写的-："><a href="#常见的filiter-过滤器-搜索框可以填写的-：" class="headerlink" title="常见的filiter(过滤器,搜索框可以填写的)："></a>常见的filiter(过滤器,搜索框可以填写的)：</h2><blockquote><p>net:192.168.1.1<br>country:CN,US,JP（将搜索结果限定在某个国家）<br>city:Beijing<br>port:80<br>os:windows/linux<br>hostbane:kali<br>server:apache</p></blockquote><p>使用教程：<a href="http://www.freebuf.com/sectool/121339.html" target="_blank" rel="noopener">http://www.freebuf.com/sectool/121339.html</a></p><h1 id="hacking-Goole："><a href="#hacking-Goole：" class="headerlink" title="hacking Goole："></a>hacking Goole：</h1><blockquote><p>基本使用：①+支付 -充值（要支付，不要充值）<br>支付 充值（支付&amp;&amp;充值）<br>“支付 充值“（只含”支付 充值“这个字段）<br>intile:电子商务<br>intext(正文)<br>site：搜索的站点<br>inurl：contact（网站中含有电话的）<br>filetype：pdf（搜索pdf）</p></blockquote><p>使用教程：<a href="https://www.exploit-db.com/google-hacking-database/" target="_blank" rel="noopener">https://www.exploit-db.com/google-hacking-database/</a></p>]]></content>
-      
+      <tags>
+        <tag>心情</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[Python爬虫之猫眼TOP100]]></title>
+    <url>%2F2018%2F08%2F02%2F8%2F</url>
+    <content type="text"><![CDATA[感谢遇到的每个BUG!!!基于Requests基础库的爬虫demo 1234567891011121314151617181920212223242526272829303132333435363738394041424344454647484950515253import requests #导入请求模块import json#json格式from requests.exceptions import RequestException#捕捉错误模块import re#正则模块import time#时间模块def get_one_page(url): try:#检测 headers = &#123; &apos;User-Agent&apos;: &apos;Mozilla/5.0(Windows NT 10.0;Win64;x64;rv:59.0)Gecko/20100101 Firefox/59.0&apos;, &#125; response = requests.get(url, headers=headers)#请求 if response.status_code == 200: return response.text print(&apos;请求不成功&apos;) except RequestException: print(&apos;程序错误&apos;)def parse_one_page(html):#利用正则筛选需要的数据 pattern = re.compile(&apos;&lt;dd&gt;.*?board-index.*?&gt;(\d+)&lt;/i&gt;.*?data-src=&quot;(.*?)&quot;.*?name&quot;&gt;&lt;a&apos; + &apos;.*?&gt;(.*?)&lt;/a&gt;.*?star&quot;&gt;(.*?)&lt;/p&gt;.*?releasetime&quot;&gt;(.*?)&lt;/p&gt;&apos; + &apos;.*?integer&quot;&gt;(.*?)&lt;/i&gt;.*?fraction&quot;&gt;(.*?)&lt;/i&gt;.*?&lt;/dd&gt;&apos;, re.S)#正则表达式实例化 items=re.findall(pattern, html)#findall(正则表达式，参数对象)搜索整个字符串 for item in items: yield &#123; #迭代生成器 &apos;排名&apos;: item[0], &apos;图片&apos;: item[1], &apos;电影名&apos;: item[2], &apos;主演人员&apos;: item[3].strip()[3:],#strip() 方法用于移除字符串头尾指定的字符（默认为空格或换行符）或字符序列 &apos;上映时间&apos;: item[4].strip()[5:], &apos;评分&apos;: item[5]+ item[6] &#125;def write_to_file(content):#写入文件 with open(&apos;猫眼TOP100.txt&apos;, &apos;a&apos;, encoding=&apos;utf-8&apos;) as f: f.write(json.dumps(content, ensure_ascii=False) + &apos;\n&apos;)#json.dumps()将 Python 对象编码成 JSON 字符串def main(offset):#提供参数实行遍历 url = &apos;http://maoyan.com/board/4?offset=&apos; + str(offset)#提供url html = get_one_page(url)#把requests实例化 for item in parse_one_page(html): print(item)#打印已经筛选好的数据 write_to_file(item)#传入数据写入文件if __name__ == &apos;__main__&apos;:#这个表示执行的是此代码所在的文件。 如果这个文件是作为模块被其他文件调用，不会执行这里面的代码。 只有执行这个文件时， if 里面的语句才会被执行。 这个功能经常可以用于进行测试。 for i in range(10):#range() 从 0 开始到 10；[0, 1, 2, 3, 4, 5, 6, 7, 8, 9] main(offset=i * 10)#分页爬取 time.sleep(1)# 推迟执行的秒数。]]></content>
       <categories>
-          
-          <category> 星球笔记 </category>
-          
+        <category>Python爬虫</category>
       </categories>
-      
-      
-        <tags>
-            
-            <tag> 渗透测试 </tag>
-            
-            <tag> 信息收集 </tag>
-            
-        </tags>
-      
-    </entry>
-    
-    <entry>
-      <title>被动信息收集之dns区域传输与爆破</title>
-      <link href="/2018/07/31/6/"/>
-      <url>/2018/07/31/6/</url>
-      <content type="html"><![CDATA[<h1 id="Dns：采用递归查询"><a href="#Dns：采用递归查询" class="headerlink" title="Dns：采用递归查询"></a><u>Dns：采用递归查询</u></h1><h2 id="递归是什么"><a href="#递归是什么" class="headerlink" title="递归是什么:"></a>递归是什么:</h2><blockquote><p><strong>指在函数的定义中使用函数自身的方法。归查询是最常见的查询方式，域名服务器将代替提出请求的客户机进行域名查询，若域名服务器不能直接回答，则域名服务器会在域各树中的各分支的上下进行递归查询，最终将返回查询结果给客户机，在域名服务器查询期间，客户机完全处于等待状态。</strong></p></blockquote><a id="more"></a><p></p><h2 id="递归八部过程："><a href="#递归八部过程：" class="headerlink" title="递归八部过程："></a>递归八部过程：</h2><blockquote><h3 id="首先，客户端提出域名解析请求，并将该请求发或转发给本地的dns服务器。接着，本地dns服务器收到请求后就去查询自己的缓存，如果有该条记录，则会将查询返回给客户端。（“非权威性”的应答）"><a href="#首先，客户端提出域名解析请求，并将该请求发或转发给本地的dns服务器。接着，本地dns服务器收到请求后就去查询自己的缓存，如果有该条记录，则会将查询返回给客户端。（“非权威性”的应答）" class="headerlink" title="首先，客户端提出域名解析请求，并将该请求发或转发给本地的dns服务器。接着，本地dns服务器收到请求后就去查询自己的缓存，如果有该条记录，则会将查询返回给客户端。（“非权威性”的应答）"></a>首先，客户端提出域名解析请求，并将该请求发或转发给本地的dns服务器。接着，本地dns服务器收到请求后就去查询自己的缓存，如果有该条记录，则会将查询返回给客户端。（“非权威性”的应答）</h3></blockquote><blockquote><h3 id="如何dns服务器本地没有搜索到相应的记录，则会把请求转发到根DNS-13台根DNS服务器的IP信息默认均存在dns服务器中，当需要时就会去有选择性的连接-。然后，根DNS服务器收到请求后会判断这个域名是谁来授权管理，并会返回一个负责该域名子域名的DNS服务器地址。比如，查询abc-com的IP，根DNS服务器就会在负责-com顶级域名的DNS服务器中选择一个（并非随机，而是根据空间，地址，管辖区域等条件进行筛选），返回给本地DNS服务器。可以说根域对顶级域名有绝对管理权，自然也知道他们的全部信息，因为DNS系统中，上一级对下一级有管理权限，毫无疑问，根DNS是最高一级了。"><a href="#如何dns服务器本地没有搜索到相应的记录，则会把请求转发到根DNS-13台根DNS服务器的IP信息默认均存在dns服务器中，当需要时就会去有选择性的连接-。然后，根DNS服务器收到请求后会判断这个域名是谁来授权管理，并会返回一个负责该域名子域名的DNS服务器地址。比如，查询abc-com的IP，根DNS服务器就会在负责-com顶级域名的DNS服务器中选择一个（并非随机，而是根据空间，地址，管辖区域等条件进行筛选），返回给本地DNS服务器。可以说根域对顶级域名有绝对管理权，自然也知道他们的全部信息，因为DNS系统中，上一级对下一级有管理权限，毫无疑问，根DNS是最高一级了。" class="headerlink" title="如何dns服务器本地没有搜索到相应的记录，则会把请求转发到根DNS(13台根DNS服务器的IP信息默认均存在dns服务器中，当需要时就会去有选择性的连接)。然后，根DNS服务器收到请求后会判断这个域名是谁来授权管理，并会返回一个负责该域名子域名的DNS服务器地址。比如，查询abc.com的IP，根DNS服务器就会在负责.com顶级域名的DNS服务器中选择一个（并非随机，而是根据空间，地址，管辖区域等条件进行筛选），返回给本地DNS服务器。可以说根域对顶级域名有绝对管理权，自然也知道他们的全部信息，因为DNS系统中，上一级对下一级有管理权限，毫无疑问，根DNS是最高一级了。"></a>如何dns服务器本地没有搜索到相应的记录，则会把请求转发到根DNS(13台根DNS服务器的IP信息默认均存在dns服务器中，当需要时就会去有选择性的连接)。然后，根DNS服务器收到请求后会判断这个域名是谁来授权管理，并会返回一个负责该域名子域名的DNS服务器地址。比如，查询abc.com的IP，根DNS服务器就会在负责.com顶级域名的DNS服务器中选择一个（并非随机，而是根据空间，地址，管辖区域等条件进行筛选），返回给本地DNS服务器。可以说根域对顶级域名有绝对管理权，自然也知道他们的全部信息，因为DNS系统中，上一级对下一级有管理权限，毫无疑问，根DNS是最高一级了。</h3></blockquote><blockquote><h3 id="本地DNS服务器收到这个地址后，就开始联系对方并将此请求发给他。负责-com域名的某台服务器收到此请求后，如果自己无法解析，就会返回一个管理-com的下一级DNS服务器地址给本地DNS服务器，也就是负责管理abc-com的DNS。"><a href="#本地DNS服务器收到这个地址后，就开始联系对方并将此请求发给他。负责-com域名的某台服务器收到此请求后，如果自己无法解析，就会返回一个管理-com的下一级DNS服务器地址给本地DNS服务器，也就是负责管理abc-com的DNS。" class="headerlink" title="本地DNS服务器收到这个地址后，就开始联系对方并将此请求发给他。负责.com域名的某台服务器收到此请求后，如果自己无法解析，就会返回一个管理.com的下一级DNS服务器地址给本地DNS服务器，也就是负责管理abc.com的DNS。"></a>本地DNS服务器收到这个地址后，就开始联系对方并将此请求发给他。负责.com域名的某台服务器收到此请求后，如果自己无法解析，就会返回一个管理.com的下一级DNS服务器地址给本地DNS服务器，也就是负责管理abc.com的DNS。</h3></blockquote><blockquote><h3 id="当本地DNS服务器收到这个地址后，就会重复上面的动作，继续往下联系。"><a href="#当本地DNS服务器收到这个地址后，就会重复上面的动作，继续往下联系。" class="headerlink" title="当本地DNS服务器收到这个地址后，就会重复上面的动作，继续往下联系。"></a>当本地DNS服务器收到这个地址后，就会重复上面的动作，继续往下联系。</h3></blockquote><blockquote><h3 id="不断重复这样的轮回过程，直到有一台DNS服务器可以顺利解析出这个地址为止。在这个过程中，客户端一直处理等待状态，他不需要做任何事，也做不了上面。"><a href="#不断重复这样的轮回过程，直到有一台DNS服务器可以顺利解析出这个地址为止。在这个过程中，客户端一直处理等待状态，他不需要做任何事，也做不了上面。" class="headerlink" title="不断重复这样的轮回过程，直到有一台DNS服务器可以顺利解析出这个地址为止。在这个过程中，客户端一直处理等待状态，他不需要做任何事，也做不了上面。"></a>不断重复这样的轮回过程，直到有一台DNS服务器可以顺利解析出这个地址为止。在这个过程中，客户端一直处理等待状态，他不需要做任何事，也做不了上面。</h3></blockquote><blockquote><h3 id="直到本地DNS服务器获得IP时，才会把这个IP返回给客户端，到此在本地的DNS服务器取得IP地址后，递归查询就算完成了。本地DNS服务器同时会将这条记录写入自己的缓存，以备后用。到此，整个解析过程完成。"><a href="#直到本地DNS服务器获得IP时，才会把这个IP返回给客户端，到此在本地的DNS服务器取得IP地址后，递归查询就算完成了。本地DNS服务器同时会将这条记录写入自己的缓存，以备后用。到此，整个解析过程完成。" class="headerlink" title="直到本地DNS服务器获得IP时，才会把这个IP返回给客户端，到此在本地的DNS服务器取得IP地址后，递归查询就算完成了。本地DNS服务器同时会将这条记录写入自己的缓存，以备后用。到此，整个解析过程完成。"></a>直到本地DNS服务器获得IP时，才会把这个IP返回给客户端，到此在本地的DNS服务器取得IP地址后，递归查询就算完成了。本地DNS服务器同时会将这条记录写入自己的缓存，以备后用。到此，整个解析过程完成。</h3></blockquote><blockquote><h3 id="客户端拿到整个地址后，就可以顺利往下进行了。但假设客户端请求的域名根本不存在，解析自然不成功，DNS服务器会返回此域名不可达，值啊客户端的提现就是网页无法浏览或者网络程序无法连接等待。"><a href="#客户端拿到整个地址后，就可以顺利往下进行了。但假设客户端请求的域名根本不存在，解析自然不成功，DNS服务器会返回此域名不可达，值啊客户端的提现就是网页无法浏览或者网络程序无法连接等待。" class="headerlink" title="客户端拿到整个地址后，就可以顺利往下进行了。但假设客户端请求的域名根本不存在，解析自然不成功，DNS服务器会返回此域名不可达，值啊客户端的提现就是网页无法浏览或者网络程序无法连接等待。"></a>客户端拿到整个地址后，就可以顺利往下进行了。但假设客户端请求的域名根本不存在，解析自然不成功，DNS服务器会返回此域名不可达，值啊客户端的提现就是网页无法浏览或者网络程序无法连接等待。</h3></blockquote><blockquote><h3 id="从DNS服务器本地没有搜索到相应的记录，到在本地的DNS服务器取得IP地址这个过程就叫做DNS递归查询。"><a href="#从DNS服务器本地没有搜索到相应的记录，到在本地的DNS服务器取得IP地址这个过程就叫做DNS递归查询。" class="headerlink" title="从DNS服务器本地没有搜索到相应的记录，到在本地的DNS服务器取得IP地址这个过程就叫做DNS递归查询。"></a>从DNS服务器本地没有搜索到相应的记录，到在本地的DNS服务器取得IP地址这个过程就叫做<u>DNS递归查询</u>。</h3></blockquote><p><img src="http://pb2ryxkgu.bkt.clouddn.com/18-7-31/75853593.jpg"></p><h1 id="dig查询工具："><a href="#dig查询工具：" class="headerlink" title="dig查询工具："></a>dig查询工具：</h1><h2 id="dig命令："><a href="#dig命令：" class="headerlink" title="dig命令："></a>dig命令：</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">dig www.sina.com any(查找所有记录) @8.8.8.8（指定dns服务器）</span><br></pre></td></tr></table></figure><blockquote><p>基本参数：<br>+noall：不显示任何结果，一般其他参数使用。<br>+answer：只显示结果。<br>-x：反向解析 dig -x 192.168.1.1(反向查询：ptr记录)<br>配合使用：dig+noall+answer……(除了结果什么都不显示)**</p></blockquote><h2 id="利用dig查询并进行抓包："><a href="#利用dig查询并进行抓包：" class="headerlink" title="利用dig查询并进行抓包："></a>利用dig查询并进行抓包：</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">dig sina.com +trace</span><br></pre></td></tr></table></figure><blockquote><p>1.进行域名追踪并通过wireshark进行抓包，可以了解到dns递归查询是怎样查询的，并且通过抓包，可以发现是否有人对dns服务器进行劫持，把域名解析道恶意网站。<br>2.dig不能查询一个域名下的所有记录<br>3.利用dig查询bind版本（dns的bing版本）查看存在的漏洞，对dns服务器进行攻击，进而取得所有的记录。</p></blockquote><p>基本命令：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">dig +noall +answer txt chaos（类） VERSION.BING @ns3.dnsv4.com</span><br></pre></td></tr></table></figure></p><blockquote><p>命令的意思：查询txt记录，它是chaos类，一般查的ns,cname,a记录都是inter类，可以通过抓包查看记录是什么类，后面接的是bind版本，@后接要查的dns服务器。</p></blockquote><h1 id="dns区域传输：（配合抓包）"><a href="#dns区域传输：（配合抓包）" class="headerlink" title="dns区域传输：（配合抓包）"></a>dns区域传输：（配合抓包）</h1><blockquote><p>利用dns之间的同步机制（一台dns服务器上的变更可以同步到其他的服务器，一般区域传输至存在本地dns服务器上，如果管理员配置错误，就有可能让人访问到所有的记录），首先利用nslookup或者dig查询域名下的dns服务器，配合抓包。<br>常见命令：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">dig @ns1.example.com example.com axfr（区域传输的方法：差异化传输）#一般不会成功，除非配置错误</span><br><span class="line">host -T(使用TCP) -l(采用axfr传输) sina.com ns3.sina.com</span><br></pre></td></tr></table></figure></p></blockquote><h1 id="Dns字典爆破："><a href="#Dns字典爆破：" class="headerlink" title="Dns字典爆破："></a>Dns字典爆破：</h1><p><strong>向dns服务器发送查询，如果有这个记录，就会返回结果，反之不反回，利用这个原理进行暴力破解。（一般区域传输都不会成功，特别是大型网站，）</strong></p><p><strong>命令：</strong></p><blockquote><p>fierce -dnsserver 192.168.1.1 -dns sina.com.cn -wordlist a.txt<br>dnsdict6 -d4 -t 16(使用线程数) -x sina.com（推荐）<br>dnsenum -f dnsbig.txt -dnsserver 8.8.8.8 sina.com -o sina.txt<br>dnsmap sina.com -w dns.txt<br>dnsrecon -d sina.com –lifetime 10 -t brt -D dnsbig.txt<br>dnsrecon -t std -d sina.com</p></blockquote>]]></content>
-      
+      <tags>
+        <tag>Python</tag>
+        <tag>爬虫</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[被动信息收集之搜索引擎]]></title>
+    <url>%2F2018%2F07%2F31%2F7%2F</url>
+    <content type="text"><![CDATA[搜索引擎功能： 1.收集要渗透的公司的新闻动态2.重要的雇员信息，比如这个雇员是哪个大佬，他的职务，所掌握的信息3.机密文档/网络拓扑：有些公司的机密文档是放在公网上的，但是隐藏了，但是会被强大的搜索引擎扫出来4.用户名和密码：有些用户名密码是默认的，这就可以通过搜索引擎查找，比如某个品牌的摄像头设置了默认密码，就可以通过搜索引擎查看这个品牌的默认密码，也有一些密码可能被别人脱裤了，放到了网上，我们也可以查到，然后利用撞库尝试密码5.目标系统的技术架构：搜集要渗透的公司技术架构，用的是什么软硬件，什么版本，有什么已经公开的漏洞 Shodan工具：Shadan是一款功能强大的搜索引擎，但是它不爬取网页信息，只爬取各种网路设备，例如http,ftp,ssh,telent等工具地址：https://www.shodan.io/ 常见的filiter(过滤器,搜索框可以填写的)： net:192.168.1.1country:CN,US,JP（将搜索结果限定在某个国家）city:Beijingport:80os:windows/linuxhostbane:kaliserver:apache 使用教程：http://www.freebuf.com/sectool/121339.html hacking Goole： 基本使用：①+支付 -充值（要支付，不要充值）支付 充值（支付&amp;&amp;充值）“支付 充值“（只含”支付 充值“这个字段）intile:电子商务intext(正文)site：搜索的站点inurl：contact（网站中含有电话的）filetype：pdf（搜索pdf） 使用教程：https://www.exploit-db.com/google-hacking-database/]]></content>
       <categories>
-          
-          <category> 星球笔记 </category>
-          
+        <category>星球笔记</category>
       </categories>
-      
-      
-        <tags>
-            
-            <tag> 渗透测试 </tag>
-            
-            <tag> 信息收集 </tag>
-            
-        </tags>
-      
-    </entry>
-    
-    <entry>
-      <title>面向基础篇之信息搜集</title>
-      <link href="/2018/07/31/3/"/>
-      <url>/2018/07/31/3/</url>
-      <content type="html"><![CDATA[<h1 id="概要：渗透测试的第一步为信息收集。信息收集分为两个方面，主动信息收集和被动信息收集。"><a href="#概要：渗透测试的第一步为信息收集。信息收集分为两个方面，主动信息收集和被动信息收集。" class="headerlink" title="概要：渗透测试的第一步为信息收集。信息收集分为两个方面，主动信息收集和被动信息收集。"></a>概要：渗透测试的第一步为信息收集。<p>信息收集分为两个方面，<code>主动信息收集</code>和<code>被动信息收集</code>。</p></h1><h2 id="被动信息收集注意事项："><a href="#被动信息收集注意事项：" class="headerlink" title="被动信息收集注意事项："></a>被动信息收集注意事项：</h2><ol><li>信息是公开渠道可获得的信息，例如网络上的信息，街边的小广告</li><li>收集信息时不与系统产生直接交互（例如不对主机进行大量探测，不进行端口扫描）</li><li>尽量避免留下一切痕迹</li></ol><a id="more"></a><blockquote><h2 id="可收集的信息内容："><a href="#可收集的信息内容：" class="headerlink" title="可收集的信息内容："></a>可收集的信息内容：</h2><p>ip地址段<br>域名信息<br>邮件地址<br>文档图片<br>公司地址<br>公司组织架构<br>联系电话<br>人员姓名/职务<br>目标系统的技术框架<br>公开的商业信息</p></blockquote><h2 id="用途："><a href="#用途：" class="headerlink" title="用途："></a>用途：</h2><blockquote><p>信息描述目标<br>社会工程学等</p></blockquote><hr><h1 id="ip域名查询工具：-nslookup"><a href="#ip域名查询工具：-nslookup" class="headerlink" title="ip域名查询工具： nslookup"></a>ip域名查询工具： nslookup</h1><h2 id="域名记录："><a href="#域名记录：" class="headerlink" title="域名记录："></a>域名记录：</h2><blockquote><p>A（Adress）用来指定主机名（或域名）的对应的ip地址记录。<br>C name：通常称别名指向，可以将注册的不同域名统统转到一个主域名上，CNAME别名记录与A记录不同的是可以是一个域名的描述而不一定是ip地址。<br>NS：（Name Server）是域名服务器记录，用来指定域名应该由哪个DNS服务器来进行解析。<br>MX：邮件交换记录，他指向一个邮件服务器，用于电子邮件系统发邮件时根据收信人的地址后缀来定位邮件服务器。<br>Ptr(ip地址反向解析)：邮件交换记录<br>TXT记录：一般为某个主机名或域名设置的说明<br>Url：地址转发<br>FQND：完全限定域名，与域名不同（eg：<a href="http://www.sina.com" target="_blank" rel="noopener">www.sina.com</a> 就是一个完全限定域名，只是域名的其中一种）</p></blockquote><h2 id="Dns查询方式：递归查询"><a href="#Dns查询方式：递归查询" class="headerlink" title="Dns查询方式：递归查询"></a>Dns查询方式：递归查询</h2><p></p><p><strong>（域名服务器将代替提出请求的客户机（下级DNS服务器）进行域名查询，若域名服务器不能直接回答，则域名服务器会在域各树中的各分支的上下进行递归查询，最终将返回查询结果给客户机，在域名服务器查询期间，客户机将完全处于等待状态。）</strong></p><br><img src="http://pb2ryxkgu.bkt.clouddn.com/18-7-31/28601511.jpg" width="100%" height="50%"><p></p><h2 id="nslookup使用方法："><a href="#nslookup使用方法：" class="headerlink" title="nslookup使用方法："></a>nslookup使用方法：</h2><blockquote><p>直接输入nslookup进行命令提示符操作<br>通过server+ip地址（中间一定要有个空格）选择要查询的dns服务器<br>通过 set type=a/ns/ptr/any(代表所有记录)<br>可以将第一种方法上的所有参数用一条命令写出来：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nslookup -type=a baidu.com 114.114.114.114(指定想用的本地dns服务器)</span><br></pre></td></tr></table></figure></p></blockquote><blockquote><p>一个域名可以解析多个主机记录和多个cname，对应多个ip地址，对一个ip地址进行ptr查询的时候不一定返回一个相同的域名。<br>使用不同的服务器解析相同的了域名会有不同的ip地址，因为智能dns服务器会尽量将流量限定在本地网络，当进行域名查询的时候会返回最近的域名服务器的地址。</p></blockquote>]]></content>
-      
+      <tags>
+        <tag>渗透测试</tag>
+        <tag>信息收集</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[被动信息收集之dns区域传输与爆破]]></title>
+    <url>%2F2018%2F07%2F31%2F6%2F</url>
+    <content type="text"><![CDATA[Dns：采用递归查询递归是什么: 指在函数的定义中使用函数自身的方法。归查询是最常见的查询方式，域名服务器将代替提出请求的客户机进行域名查询，若域名服务器不能直接回答，则域名服务器会在域各树中的各分支的上下进行递归查询，最终将返回查询结果给客户机，在域名服务器查询期间，客户机完全处于等待状态。 递归八部过程： 首先，客户端提出域名解析请求，并将该请求发或转发给本地的dns服务器。接着，本地dns服务器收到请求后就去查询自己的缓存，如果有该条记录，则会将查询返回给客户端。（“非权威性”的应答） 如何dns服务器本地没有搜索到相应的记录，则会把请求转发到根DNS(13台根DNS服务器的IP信息默认均存在dns服务器中，当需要时就会去有选择性的连接)。然后，根DNS服务器收到请求后会判断这个域名是谁来授权管理，并会返回一个负责该域名子域名的DNS服务器地址。比如，查询abc.com的IP，根DNS服务器就会在负责.com顶级域名的DNS服务器中选择一个（并非随机，而是根据空间，地址，管辖区域等条件进行筛选），返回给本地DNS服务器。可以说根域对顶级域名有绝对管理权，自然也知道他们的全部信息，因为DNS系统中，上一级对下一级有管理权限，毫无疑问，根DNS是最高一级了。 本地DNS服务器收到这个地址后，就开始联系对方并将此请求发给他。负责.com域名的某台服务器收到此请求后，如果自己无法解析，就会返回一个管理.com的下一级DNS服务器地址给本地DNS服务器，也就是负责管理abc.com的DNS。 当本地DNS服务器收到这个地址后，就会重复上面的动作，继续往下联系。 不断重复这样的轮回过程，直到有一台DNS服务器可以顺利解析出这个地址为止。在这个过程中，客户端一直处理等待状态，他不需要做任何事，也做不了上面。 直到本地DNS服务器获得IP时，才会把这个IP返回给客户端，到此在本地的DNS服务器取得IP地址后，递归查询就算完成了。本地DNS服务器同时会将这条记录写入自己的缓存，以备后用。到此，整个解析过程完成。 客户端拿到整个地址后，就可以顺利往下进行了。但假设客户端请求的域名根本不存在，解析自然不成功，DNS服务器会返回此域名不可达，值啊客户端的提现就是网页无法浏览或者网络程序无法连接等待。 从DNS服务器本地没有搜索到相应的记录，到在本地的DNS服务器取得IP地址这个过程就叫做DNS递归查询。 dig查询工具：dig命令：1dig www.sina.com any(查找所有记录) @8.8.8.8（指定dns服务器） 基本参数：+noall：不显示任何结果，一般其他参数使用。+answer：只显示结果。-x：反向解析 dig -x 192.168.1.1(反向查询：ptr记录)配合使用：dig+noall+answer……(除了结果什么都不显示)** 利用dig查询并进行抓包：1dig sina.com +trace 1.进行域名追踪并通过wireshark进行抓包，可以了解到dns递归查询是怎样查询的，并且通过抓包，可以发现是否有人对dns服务器进行劫持，把域名解析道恶意网站。2.dig不能查询一个域名下的所有记录3.利用dig查询bind版本（dns的bing版本）查看存在的漏洞，对dns服务器进行攻击，进而取得所有的记录。 基本命令：1dig +noall +answer txt chaos（类） VERSION.BING @ns3.dnsv4.com 命令的意思：查询txt记录，它是chaos类，一般查的ns,cname,a记录都是inter类，可以通过抓包查看记录是什么类，后面接的是bind版本，@后接要查的dns服务器。 dns区域传输：（配合抓包） 利用dns之间的同步机制（一台dns服务器上的变更可以同步到其他的服务器，一般区域传输至存在本地dns服务器上，如果管理员配置错误，就有可能让人访问到所有的记录），首先利用nslookup或者dig查询域名下的dns服务器，配合抓包。常见命令：12dig @ns1.example.com example.com axfr（区域传输的方法：差异化传输）#一般不会成功，除非配置错误host -T(使用TCP) -l(采用axfr传输) sina.com ns3.sina.com Dns字典爆破：向dns服务器发送查询，如果有这个记录，就会返回结果，反之不反回，利用这个原理进行暴力破解。（一般区域传输都不会成功，特别是大型网站，） 命令： fierce -dnsserver 192.168.1.1 -dns sina.com.cn -wordlist a.txtdnsdict6 -d4 -t 16(使用线程数) -x sina.com（推荐）dnsenum -f dnsbig.txt -dnsserver 8.8.8.8 sina.com -o sina.txtdnsmap sina.com -w dns.txtdnsrecon -d sina.com –lifetime 10 -t brt -D dnsbig.txtdnsrecon -t std -d sina.com]]></content>
       <categories>
-          
-          <category> 星球笔记 </category>
-          
+        <category>星球笔记</category>
       </categories>
-      
-      
-        <tags>
-            
-            <tag> 渗透测试 </tag>
-            
-            <tag> 信息收集 </tag>
-            
-        </tags>
-      
-    </entry>
-    
-    <entry>
-      <title>HTML自定义元素</title>
-      <link href="/2018/07/31/1/"/>
-      <url>/2018/07/31/1/</url>
-      <content type="html"><![CDATA[<h1 id="一．浏览器处理"><a href="#一．浏览器处理" class="headerlink" title="一．浏览器处理"></a>一．浏览器处理</h1><h2 id="标准的HTML元素："><a href="#标准的HTML元素：" class="headerlink" title="标准的HTML元素："></a>标准的HTML元素：</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">&lt;p&gt;</span><br><span class="line">Hello World</span><br><span class="line">&lt;/p&gt;</span><br></pre></td></tr></table></figure><h2 id="非标准（浏览器不认识的）："><a href="#非标准（浏览器不认识的）：" class="headerlink" title="非标准（浏览器不认识的）："></a>非标准（浏览器不认识的）：</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">&lt;greeting&gt;</span><br><span class="line">Hello World</span><br><span class="line">&lt;/greeting&gt;</span><br></pre></td></tr></table></figure><h2 id="自定义的元素："><a href="#自定义的元素：" class="headerlink" title="自定义的元素："></a>自定义的元素：</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">greeting&#123;</span><br><span class="line">display: block;</span><br><span class="line">font-size: 36px;</span><br><span class="line">color: red;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><a id="more"></a><h2 id="浏览器提供了一个HTMLUnknoweElement对象，所有自定义元素都是该对象的实例。"><a href="#浏览器提供了一个HTMLUnknoweElement对象，所有自定义元素都是该对象的实例。" class="headerlink" title="浏览器提供了一个HTMLUnknoweElement对象，所有自定义元素都是该对象的实例。"></a>浏览器提供了一个<code>HTMLUnknoweElement</code>对象，所有自定义元素都是该对象的实例。</h2><h2 id="自定义tabs元素，同时继承HTMLUnknownElement和HTMLElement接口："><a href="#自定义tabs元素，同时继承HTMLUnknownElement和HTMLElement接口：" class="headerlink" title="自定义tabs元素，同时继承HTMLUnknownElement和HTMLElement接口："></a>自定义<code>tabs</code>元素，同时继承<code>HTMLUnknownElement</code>和<code>HTMLElement</code>接口：</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Var tabs=document.createElement(‘tabs’)</span><br><span class="line">Tabs instanceof HTMLUnknownElement//true</span><br><span class="line">Tabs instanceof HTMLElement//true</span><br></pre></td></tr></table></figure><h1 id="二．HTML-import"><a href="#二．HTML-import" class="headerlink" title="二．HTML import"></a>二．HTML import</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">&lt;share-buttons&gt;</span><br><span class="line">&lt;social-button type=”weibo”&gt;</span><br><span class="line">&lt;a href==”…”&gt;微博&lt;/a&gt;</span><br><span class="line">&lt;social-button type=”weixin”&gt;</span><br><span class="line">&lt;a href+”…”&gt;微信&lt;/a&gt;</span><br><span class="line">&lt;/social-button&gt;</span><br><span class="line">&lt;/share-buttons&gt;</span><br></pre></td></tr></table></figure><h2 id="将share-buttons自定义元素和脚本，封装在HTML文件share-buttons-html之中，元素使用的时候，先引进"><a href="#将share-buttons自定义元素和脚本，封装在HTML文件share-buttons-html之中，元素使用的时候，先引进" class="headerlink" title="将share-buttons自定义元素和脚本，封装在HTML文件share-buttons.html之中，元素使用的时候，先引进"></a>将<code>share-buttons</code>自定义元素和脚本，封装在<strong>HTML</strong>文件<code>share-buttons.html</code>之中，元素使用的时候，先引进</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">share-buttons.html.</span><br><span class="line">&lt;link rel=”import” href=”share-buttons.html”&gt;</span><br></pre></td></tr></table></figure><h2 id="然后网页中可以使用"><a href="#然后网页中可以使用" class="headerlink" title="然后网页中可以使用"></a>然后网页中可以使用</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">&lt;share-buttons&gt;:</span><br><span class="line">&lt;article&gt;</span><br><span class="line">&lt;h1&gt;Title&lt;/h1&gt;</span><br><span class="line">&lt;&gt;share-buttons/&gt;</span><br><span class="line">… …</span><br><span class="line">&lt;/article&gt;</span><br></pre></td></tr></table></figure><h1 id="三-Custom-Elements-标准"><a href="#三-Custom-Elements-标准" class="headerlink" title="三. Custom Elements 标准"></a>三. Custom Elements 标准</h1><pre><code>1．W3C 为自定义制定了单独的Custom Elements2．它与其他的三个标准放在一起——HTML import, HTML Template, Shadow DOM——统称为Web Components规范。</code></pre><blockquote><h3 id="Custom-Elements-标准对自定义元素的名字做了限制："><a href="#Custom-Elements-标准对自定义元素的名字做了限制：" class="headerlink" title="Custom Elements 标准对自定义元素的名字做了限制："></a>Custom Elements 标准对自定义元素的名字做了限制：</h3><h3 id="“自定义元素的名字必须包含一个破折号（-）所以-和都是正确的名字，而和-lt-foo-bar-gt-是不正确的。这样的限制使得HTML解析器可以分辨哪些是标准元素，哪些是自定义元素。”"><a href="#“自定义元素的名字必须包含一个破折号（-）所以-和都是正确的名字，而和-lt-foo-bar-gt-是不正确的。这样的限制使得HTML解析器可以分辨哪些是标准元素，哪些是自定义元素。”" class="headerlink" title="“自定义元素的名字必须包含一个破折号（-）所以,和都是正确的名字，而和&lt;foo_bar&gt;是不正确的。这样的限制使得HTML解析器可以分辨哪些是标准元素，哪些是自定义元素。”"></a>“自定义元素的名字必须包含一个破折号（-）所以<x-tags>,<my-element>和<my-awesome-app>都是正确的名字，而<tabs>和&lt;foo_bar&gt;是不正确的。这样的限制使得HTML解析器可以分辨哪些是标准元素，哪些是自定义元素。”</tabs></my-awesome-app></my-element></x-tags></h3></blockquote>]]></content>
-      
+      <tags>
+        <tag>渗透测试</tag>
+        <tag>信息收集</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[面向基础篇之信息搜集]]></title>
+    <url>%2F2018%2F07%2F31%2F3%2F</url>
+    <content type="text"><![CDATA[概要：渗透测试的第一步为信息收集。信息收集分为两个方面，主动信息收集和被动信息收集。被动信息收集注意事项： 信息是公开渠道可获得的信息，例如网络上的信息，街边的小广告 收集信息时不与系统产生直接交互（例如不对主机进行大量探测，不进行端口扫描） 尽量避免留下一切痕迹 可收集的信息内容：ip地址段域名信息邮件地址文档图片公司地址公司组织架构联系电话人员姓名/职务目标系统的技术框架公开的商业信息 用途： 信息描述目标社会工程学等 ip域名查询工具： nslookup域名记录： A（Adress）用来指定主机名（或域名）的对应的ip地址记录。C name：通常称别名指向，可以将注册的不同域名统统转到一个主域名上，CNAME别名记录与A记录不同的是可以是一个域名的描述而不一定是ip地址。NS：（Name Server）是域名服务器记录，用来指定域名应该由哪个DNS服务器来进行解析。MX：邮件交换记录，他指向一个邮件服务器，用于电子邮件系统发邮件时根据收信人的地址后缀来定位邮件服务器。Ptr(ip地址反向解析)：邮件交换记录TXT记录：一般为某个主机名或域名设置的说明Url：地址转发FQND：完全限定域名，与域名不同（eg：www.sina.com 就是一个完全限定域名，只是域名的其中一种） Dns查询方式：递归查询（域名服务器将代替提出请求的客户机（下级DNS服务器）进行域名查询，若域名服务器不能直接回答，则域名服务器会在域各树中的各分支的上下进行递归查询，最终将返回查询结果给客户机，在域名服务器查询期间，客户机将完全处于等待状态。） nslookup使用方法： 直接输入nslookup进行命令提示符操作通过server+ip地址（中间一定要有个空格）选择要查询的dns服务器通过 set type=a/ns/ptr/any(代表所有记录)可以将第一种方法上的所有参数用一条命令写出来：1nslookup -type=a baidu.com 114.114.114.114(指定想用的本地dns服务器) 一个域名可以解析多个主机记录和多个cname，对应多个ip地址，对一个ip地址进行ptr查询的时候不一定返回一个相同的域名。使用不同的服务器解析相同的了域名会有不同的ip地址，因为智能dns服务器会尽量将流量限定在本地网络，当进行域名查询的时候会返回最近的域名服务器的地址。]]></content>
       <categories>
-          
-          <category> 星球笔记 </category>
-          
+        <category>星球笔记</category>
       </categories>
-      
-      
-        <tags>
-            
-            <tag> HTML </tag>
-            
-        </tags>
-      
-    </entry>
-    
-    <entry>
-      <title>Bk</title>
-      <link href="/2018/06/29/Bk/"/>
-      <url>/2018/06/29/Bk/</url>
-      <content type="html"><![CDATA[]]></content>
-      
+      <tags>
+        <tag>渗透测试</tag>
+        <tag>信息收集</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[HTML自定义元素]]></title>
+    <url>%2F2018%2F07%2F31%2F1%2F</url>
+    <content type="text"><![CDATA[一．浏览器处理标准的HTML元素：123&lt;p&gt;Hello World&lt;/p&gt; 非标准（浏览器不认识的）：123&lt;greeting&gt;Hello World&lt;/greeting&gt; 自定义的元素：12345greeting&#123; display: block; font-size: 36px; color: red;&#125; 浏览器提供了一个HTMLUnknoweElement对象，所有自定义元素都是该对象的实例。自定义tabs元素，同时继承HTMLUnknownElement和HTMLElement接口：123Var tabs=document.createElement(‘tabs’)Tabs instanceof HTMLUnknownElement//trueTabs instanceof HTMLElement//true 二．HTML import1234567&lt;share-buttons&gt; &lt;social-button type=”weibo”&gt; &lt;a href==”…”&gt;微博&lt;/a&gt; &lt;social-button type=”weixin”&gt; &lt;a href+”…”&gt;微信&lt;/a&gt; &lt;/social-button&gt;&lt;/share-buttons&gt; 将share-buttons自定义元素和脚本，封装在HTML文件share-buttons.html之中，元素使用的时候，先引进12 share-buttons.html.&lt;link rel=”import” href=”share-buttons.html”&gt; 然后网页中可以使用123456&lt;share-buttons&gt;:&lt;article&gt; &lt;h1&gt;Title&lt;/h1&gt; &lt;&gt;share-buttons/&gt; … …&lt;/article&gt; 三. Custom Elements 标准1．W3C 为自定义制定了单独的Custom Elements 2．它与其他的三个标准放在一起——HTML import, HTML Template, Shadow DOM——统称为Web Components规范。 Custom Elements 标准对自定义元素的名字做了限制：“自定义元素的名字必须包含一个破折号（-）所以,和都是正确的名字，而和&lt;foo_bar&gt;是不正确的。这样的限制使得HTML解析器可以分辨哪些是标准元素，哪些是自定义元素。”]]></content>
       <categories>
-          
-          <category> 心情 </category>
-          
+        <category>星球笔记</category>
       </categories>
-      
-      
-        <tags>
-            
-            <tag> hexo </tag>
-            
-        </tags>
-      
-    </entry>
-    
-    <entry>
-      <title>晴</title>
-      <link href="/2018/06/28/2/"/>
-      <url>/2018/06/28/2/</url>
-      <content type="html"><![CDATA[<h1 id="努力-奋斗"><a href="#努力-奋斗" class="headerlink" title="努力+奋斗"></a>努力+奋斗</h1>]]></content>
-      
+      <tags>
+        <tag>HTML</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[Bk]]></title>
+    <url>%2F2018%2F06%2F29%2FBk%2F</url>
+    <content type="text"></content>
       <categories>
-          
-          <category> 心情 </category>
-          
+        <category>心情</category>
       </categories>
-      
-      
-        <tags>
-            
-            <tag> hexo </tag>
-            
-        </tags>
-      
-    </entry>
-    
-  
-  
+      <tags>
+        <tag>hexo</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title><![CDATA[晴]]></title>
+    <url>%2F2018%2F06%2F28%2F2%2F</url>
+    <content type="text"><![CDATA[努力+奋斗]]></content>
+      <categories>
+        <category>心情</category>
+      </categories>
+      <tags>
+        <tag>hexo</tag>
+      </tags>
+  </entry>
 </search>
